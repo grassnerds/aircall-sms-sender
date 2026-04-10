@@ -130,11 +130,13 @@ export default function Home() {
           const phone = String(r['Phone Number'] || r['phone'] || r['Phone'] || r['phone_number'] || '').trim()
           const msgType = String(r['Message Type'] || r['message_type'] || '')
           const customMsg = String(r['Custom Message'] || r['custom_message'] || '')
+          const directMsg = String(r['Message'] || r['message'] || r['Body'] || r['body'] || r['Text'] || r['text'] || '')
 
           if (!name || !phone) return
 
           let message = ''
-          if (msgType === 'Custom' && customMsg) message = customMsg
+          if (directMsg) message = directMsg
+          else if (msgType === 'Custom' && customMsg) message = customMsg
           else if (msgType && tmpls[msgType]) message = tmpls[msgType].replace(/\{name\}/gi, name)
           else if (customMsg) message = customMsg
           else if (Object.keys(tmpls).length === 1) message = Object.values(tmpls)[0].replace(/\{name\}/gi, name)
