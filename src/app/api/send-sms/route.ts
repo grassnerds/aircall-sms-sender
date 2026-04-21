@@ -21,7 +21,7 @@ export async function POST(request: Request) {
         'Authorization': `Basic ${basicAuth}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ to, body }),
+      body: JSON.stringify({ to, body, lineId: Number(numberId) }),
     })
 
     const data = await res.text()
