@@ -25,6 +25,7 @@ export default function Home() {
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
 
   // Settings
+  const [apiId, setApiId] = useState('')
   const [apiToken, setApiToken] = useState('')
   const [numberId, setNumberId] = useState('')
   const [delayMs, setDelayMs] = useState(1200)
@@ -59,6 +60,7 @@ export default function Home() {
         .single()
 
       if (data) {
+        setApiId(data.api_id || '')
         setApiToken(data.aircall_token || '')
         setNumberId(data.number_id || '')
         setDelayMs(data.delay_ms || 1200)
@@ -73,29 +75,30 @@ export default function Home() {
     if (!user) return
     await supabase.from('settings').upsert({
       user_id: user.id,
+      api_id: apiId,
       aircall_token: apiToken,
       number_id: numberId,
       delay_ms: delayMs,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
-  }, [user, apiToken, numberId, delayMs, supabase])
+  }, [user, apiId, apiToken, numberId, delayMs, supabase])
 
   // Auto-save settings when they change
   useEffect(() => {
     if (!settingsLoaded || !user) return
     const t = setTimeout(() => saveSettings(), 1000)
     return () => clearTimeout(t)
-  }, [apiToken, numberId, delayMs, settingsLoaded, user, saveSettings])
+  }, [apiId, apiToken, numberId, delayMs, settingsLoaded, user, saveSettings])
 
   // Fetch Aircall numbers
   async function fetchNumbers() {
-    if (!apiToken) return alert('Enter your API token first.')
+    if (!apiId || !apiToken) return alert('Enter your API ID and API Token first.')
     setFetchingNumbers(true)
     try {
       const res = await fetch('/api/aircall-numbers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiToken }),
+        body: JSON.stringify({ apiId, apiToken }),
       })
       const data = await res.json()
       if (data.numbers) setAircallNumbers(data.numbers)
@@ -173,7 +176,7 @@ export default function Home() {
 
   // Send messages
   async function startSending() {
-    if (!apiToken || !numberId) return alert('Configure API token and number ID first.')
+    if (!apiId || !apiToken || !numberId) return alert('Configure API ID, API Token, and sending number first.')
     const toSend = contacts.filter(c => c.selected && c.status === 'Pending')
     if (!toSend.length) return alert('No pending contacts selected.')
     if (!confirm(`Send ${toSend.length} message(s) via Aircall?`)) return
@@ -192,7 +195,7 @@ export default function Home() {
         const res = await fetch('/api/send-sms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: c.phone, body: c.message, numberId, apiToken }),
+          body: JSON.stringify({ to: c.phone, body: c.message, numberId, apiId, apiToken }),
         })
 
         if (res.ok) {
@@ -283,16 +286,24 @@ export default function Home() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Aircall API Token</label>
-              <input type="password" value={apiToken} onChange={e => setApiToken(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm" placeholder="Bearer token" />
+              <label className="block text-sm font-medium text-gray-600 mb-1">API ID</label>
+              <input type="text" value={apiId} onChange={e => setApiId(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm" placeholder="e.g. d704dc0c7039b..." />
               <p className="text-xs text-gray-400 mt-1">Aircall Dashboard &rarr; Integrations &rarr; API Keys</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Sending Number ID</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">API Token</label>
+              <input type="password" value={apiToken} onChange={e => setApiToken(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm" placeholder="Secret token (shown once when created)" />
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <label className="block text-sm font-medium text-gray-600 mb-1">Sending Number</label>
+            <div className="flex items-center gap-2">
               <input type="text" value={numberId} onChange={e => setNumberId(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm" placeholder="e.g. 123456" />
-              <button onClick={fetchNumbers} disabled={fetchingNumbers} className="text-xs text-emerald-600 hover:underline mt-1">
+                className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm" placeholder="Click 'Fetch my numbers' to select" readOnly={aircallNumbers.length > 0} />
+              <button onClick={fetchNumbers} disabled={fetchingNumbers} className="px-3 py-2 text-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition whitespace-nowrap">
                 {fetchingNumbers ? 'Fetching...' : 'Fetch my numbers'}
               </button>
             </div>

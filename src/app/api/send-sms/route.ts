@@ -6,17 +6,19 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { to, body, numberId, apiToken } = await request.json()
+  const { to, body, numberId, apiId, apiToken } = await request.json()
 
-  if (!to || !body || !numberId || !apiToken) {
+  if (!to || !body || !numberId || !apiId || !apiToken) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
+
+  const basicAuth = Buffer.from(`${apiId}:${apiToken}`).toString('base64')
 
   try {
     const res = await fetch(`https://api.aircall.io/v1/numbers/${numberId}/messages/send`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiToken}`,
+        'Authorization': `Basic ${basicAuth}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ to, body }),
