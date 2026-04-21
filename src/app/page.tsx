@@ -101,7 +101,10 @@ export default function Home() {
         body: JSON.stringify({ apiId, apiToken }),
       })
       const data = await res.json()
-      if (data.numbers) setAircallNumbers(data.numbers)
+      if (data.numbers) {
+        setAircallNumbers(data.numbers)
+        if (data.numbers.length > 0) setNumberId(String(data.numbers[0].id))
+      }
       else alert('Error: ' + (data.error || 'Unknown'))
     } catch (e) {
       alert('Failed to fetch numbers: ' + (e instanceof Error ? e.message : ''))
